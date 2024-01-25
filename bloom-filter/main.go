@@ -26,14 +26,13 @@ func mHash(key string, size int32) int32 {
 }
 
 type BloomFilter struct {
-	// TODO: optimize storage to 1 bit for each key
-	filter []bool
+	filter []uint8
 	size   int32
 }
 
 func newBloomFilter(size int32) *BloomFilter {
 	return &BloomFilter{
-		filter: make([]bool, size),
+		filter: make([]uint8, size),
 		size:   size,
 	}
 }
@@ -43,16 +42,18 @@ func (bf *BloomFilter) PrintBloomFilter() {
 }
 
 func (bf *BloomFilter) Add(key string) {
-	index := mHash(key, bf.size)
-	bf.filter[index] = true
-
-	// NOTE: Just to check the collisions
-	// fmt.Printf("Added at index: %d\n", index)
+	hashVal := mHash(key, bf.size)
+    index := hashVal / 8
+    bit := hashVal % 8
+    bf.filter[index] |= (1 << bit)
 }
 
 func (bf *BloomFilter) Exists(key string) bool {
-	index := mHash(key, bf.size)
-	return bf.filter[index]
+	hashVal := mHash(key, bf.size)
+    index := hashVal / 8
+    bit := hashVal % 8
+
+    return bf.filter[index] & (1 << bit) != 0
 }
 
 func main() {
