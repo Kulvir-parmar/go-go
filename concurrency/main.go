@@ -16,7 +16,8 @@ type server struct {
 }
 
 func (s *server) init() {
-running:
+	// this is a name for the **for** loop
+free:
 	for {
 		select {
 		case msg := <-s.msgChannel:
@@ -24,7 +25,7 @@ running:
 		case <-s.quitChannel:
 			fmt.Println("quitting from the channel")
 			// logic to close the channel
-			break running
+			break free
 		default:
 			continue
 		}
