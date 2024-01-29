@@ -2,56 +2,66 @@ package main
 
 import (
 	"fmt"
-	"sync"
 	"time"
 )
 
-func main() {
-	now := time.Now()
-	resChannel := make(chan string, 128)
-	userId := "1"
+type Message struct {
+	From    string
+	Payload string
+}
 
-	wg := &sync.WaitGroup{}
+type server struct {
+	msgChannel  chan Message
+	quitChannel chan struct{}
+}
 
-	go fetchUserData(userId, resChannel, wg)
-	wg.Add(1)
-	go fetchUserRecommendations(userId, resChannel, wg)
-	wg.Add(1)
-	go fetchUserLikes(userId, resChannel, wg)
-	wg.Add(1)
+func (s *server) init() {
+running:
+	for {
+		select {
+		case msg := <-s.msgChannel:
+			fmt.Printf("message from %s: and %s \n", msg.From, msg.Payload)
+		case <-s.quitChannel:
+			fmt.Println("quitting from the channel")
+			// logic to close the channel
+			break running
+		default:
+			continue
+		}
+	}
+	fmt.Println("the server is down")
+}
 
-	wg.Wait()
+func quitChannel(channel chan struct{}) {
+	close(channel)
+}
 
-	close(resChannel)
-
-	for res := range resChannel {
-		fmt.Println(res)
+func sendMessage(msgChannel chan Message, payload string) {
+	msg := Message{
+		From:    "JJ",
+		Payload: payload,
 	}
 
-	elapsed := time.Since(now)
-	fmt.Printf("took %s\n", elapsed)
+	msgChannel <- msg
 }
 
-func fetchUserData(userId string, resChannel chan string, wg *sync.WaitGroup) {
-	time.Sleep(80 * time.Millisecond)
+func main() {
+	s := server{
+		msgChannel:  make(chan Message),
+		quitChannel: make(chan struct{}),
+	}
 
-	resChannel <- "user data"
+	go s.init()
 
-	wg.Done()
-}
+	go func() {
+		time.Sleep(2 * time.Second)
+		sendMessage(s.msgChannel, "Hello World")
+	}()
 
-func fetchUserRecommendations(userId string, resChannel chan string, wg *sync.WaitGroup) {
-	time.Sleep(120 * time.Millisecond)
+	go func() {
+		time.Sleep(4 * time.Second)
+		quitChannel(s.quitChannel)
+	}()
 
-	resChannel <- "user recommendations"
-
-	wg.Done()
-}
-
-func fetchUserLikes(userId string, resChannel chan string, wg *sync.WaitGroup) {
-	time.Sleep(50 * time.Millisecond)
-
-	resChannel <- "user likes"
-
-	wg.Done()
+	select {}
 }
